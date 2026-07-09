@@ -1,0 +1,172 @@
+-- Run this in Supabase SQL Editor
+-- Schema for VELION social media calendar
+
+-- Calendar Pieces table
+CREATE TABLE IF NOT EXISTS calendar_pieces (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  title TEXT NOT NULL,
+  type TEXT NOT NULL CHECK (type IN ('carousel', 'story', 'reel', 'post')),
+  scheduled_date DATE NOT NULL,
+  scheduled_time TIME NOT NULL,
+  media_url TEXT,
+  media_additional TEXT[] DEFAULT '{}',
+  pillar_idea_id UUID REFERENCES pillar_ideas(id) ON DELETE SET NULL,
+  caption TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Monthly Briefs table
+CREATE TABLE IF NOT EXISTS monthly_briefs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  month TEXT NOT NULL,
+  year INTEGER NOT NULL,
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  UNIQUE(user_id, month, year)
+);
+
+-- Pillar Ideas table
+CREATE TABLE IF NOT EXISTS pillar_ideas (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  brief_id UUID REFERENCES monthly_briefs(id) ON DELETE SET NULL,
+  title TEXT NOT NULL,
+  description TEXT,
+  pillar TEXT NOT NULL DEFAULT 'General',
+  theme TEXT NOT NULL DEFAULT 'General',
+  type TEXT NOT NULL DEFAULT 'post' CHECK (type IN ('carousel', 'story', 'reel', 'post')),
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'approved', 'needs_revision', 'standby')),
+  feedback TEXT,
+  scheduled_date DATE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Add image_url to pillar_ideas (for attaching media to the idea itself)
+ALTER TABLE pillar_ideas ADD COLUMN IF NOT EXISTS image_url TEXT;
+
+-- Profiles table
+CREATE TABLE IF NOT EXISTS profiles (
+  id UUID PRIMARY KEY REFERENCES auth.users(id) ON DELETE CASCADE,
+  first_name TEXT NOT NULL DEFAULT '',
+  last_name TEXT NOT NULL DEFAULT '',
+  avatar_url TEXT,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Users can manage own profile" ON profiles;
+CREATE POLICY "Users can manage own profile"
+  ON profiles FOR ALL
+  USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);
+
+-- Auto-create profile on signup
+CREATE OR REPLACE FUNCTION handle_new_user()
+RETURNS TRIGGER AS $$
+BEGIN
+  INSERT INTO public.profiles (id, first_name, last_name)
+  VALUES (NEW.id, '', '');
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS on_auth_user_created ON auth.users;
+CREATE TRIGGER on_auth_user_created
+  AFTER INSERT ON auth.users
+  FOR EACH ROW EXECUTE FUNCTION handle_new_user();
+
+-- Brief Comments table
+CREATE TABLE IF NOT EXISTS brief_comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  brief_id UUID NOT NULL REFERENCES monthly_briefs(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Idea Comments table (add updated_at)
+CREATE TABLE IF NOT EXISTS idea_comments (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  idea_id UUID NOT NULL REFERENCES pillar_ideas(id) ON DELETE CASCADE,
+  user_id UUID NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  content TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+-- Indexes
+CREATE INDEX IF NOT EXISTS idx_calendar_pieces_user_date ON calendar_pieces(user_id, scheduled_date);
+CREATE INDEX IF NOT EXISTS idx_monthly_briefs_user_month ON monthly_briefs(user_id, year, month);
+CREATE INDEX IF NOT EXISTS idx_pillar_ideas_user ON pillar_ideas(user_id);
+CREATE INDEX IF NOT EXISTS idx_idea_comments_idea ON idea_comments(idea_id, created_at);
+CREATE INDEX IF NOT EXISTS idx_brief_comments_brief ON brief_comments(brief_id, created_at);
+
+-- Enable Row Level Security
+ALTER TABLE calendar_pieces ENABLE ROW LEVEL SECURITY;
+ALTER TABLE monthly_briefs ENABLE ROW LEVEL SECURITY;
+ALTER TABLE pillar_ideas ENABLE ROW LEVEL SECURITY;
+ALTER TABLE idea_comments ENABLE ROW LEVEL SECURITY;
+ALTER TABLE brief_comments ENABLE ROW LEVEL SECURITY;
+
+-- RLS Policies (drop first so script is idempotent)
+DROP POLICY IF EXISTS "Users can manage own calendar pieces" ON calendar_pieces;
+CREATE POLICY "Users can manage own calendar pieces"
+  ON calendar_pieces FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage own monthly briefs" ON monthly_briefs;
+CREATE POLICY "Users can manage own monthly briefs"
+  ON monthly_briefs FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage own pillar ideas" ON pillar_ideas;
+CREATE POLICY "Users can manage own pillar ideas"
+  ON pillar_ideas FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage comments on their ideas" ON idea_comments;
+CREATE POLICY "Users can manage comments on their ideas"
+  ON idea_comments FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+DROP POLICY IF EXISTS "Users can manage brief comments" ON brief_comments;
+CREATE POLICY "Users can manage brief comments"
+  ON brief_comments FOR ALL
+  USING (auth.uid() = user_id)
+  WITH CHECK (auth.uid() = user_id);
+
+-- Auto-update updated_at
+CREATE OR REPLACE FUNCTION update_updated_at()
+RETURNS TRIGGER AS $$
+BEGIN
+  NEW.updated_at = now();
+  RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS update_calendar_pieces_updated_at ON calendar_pieces;
+CREATE TRIGGER update_calendar_pieces_updated_at
+  BEFORE UPDATE ON calendar_pieces
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+DROP TRIGGER IF EXISTS update_monthly_briefs_updated_at ON monthly_briefs;
+CREATE TRIGGER update_monthly_briefs_updated_at
+  BEFORE UPDATE ON monthly_briefs
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
+
+DROP TRIGGER IF EXISTS update_pillar_ideas_updated_at ON pillar_ideas;
+CREATE TRIGGER update_pillar_ideas_updated_at
+  BEFORE UPDATE ON pillar_ideas
+  FOR EACH ROW EXECUTE FUNCTION update_updated_at();
