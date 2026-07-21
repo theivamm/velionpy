@@ -1,4 +1,3 @@
 [build]
-  base = "apps/velion"
-  command = "cd ../.. && pnpm --filter @velion/velion build"
-  publish = ".next"
+  command = "pnpm --filter @velion/velion build"
+  publish = "apps/velion/.next"
