@@ -18,9 +18,17 @@ CREATE TABLE IF NOT EXISTS profiles (
 ALTER TABLE profiles ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can manage own profile" ON profiles;
-CREATE POLICY "Users can manage own profile"
-  ON profiles FOR ALL
+CREATE POLICY "Authenticated users can view all profiles"
+  ON profiles FOR SELECT
+  USING (auth.role() = 'authenticated');
+
+CREATE POLICY "Users can update own profile"
+  ON profiles FOR UPDATE
   USING (auth.uid() = id)
+  WITH CHECK (auth.uid() = id);
+
+CREATE POLICY "Users can insert own profile"
+  ON profiles FOR INSERT
   WITH CHECK (auth.uid() = id);
 
 -- Auto-create profile on signup
@@ -59,10 +67,10 @@ CREATE TABLE IF NOT EXISTS clients (
 ALTER TABLE clients ENABLE ROW LEVEL SECURITY;
 
 DROP POLICY IF EXISTS "Users can manage own clients" ON clients;
-CREATE POLICY "Users can manage own clients"
+CREATE POLICY "Authenticated users can manage clients"
   ON clients FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
 CREATE INDEX IF NOT EXISTS idx_clients_user ON clients(user_id);
 
@@ -178,40 +186,40 @@ ALTER TABLE piece_comments ENABLE ROW LEVEL SECURITY;
 
 -- RLS Policies
 DROP POLICY IF EXISTS "Users can manage own calendar pieces" ON calendar_pieces;
-CREATE POLICY "Users can manage own calendar pieces"
+CREATE POLICY "Authenticated users can manage calendar pieces"
   ON calendar_pieces FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Users can manage own monthly briefs" ON monthly_briefs;
-CREATE POLICY "Users can manage own monthly briefs"
+CREATE POLICY "Authenticated users can manage monthly briefs"
   ON monthly_briefs FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Users can manage own pillar ideas" ON pillar_ideas;
-CREATE POLICY "Users can manage own pillar ideas"
+CREATE POLICY "Authenticated users can manage pillar ideas"
   ON pillar_ideas FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Users can manage comments on their ideas" ON idea_comments;
-CREATE POLICY "Users can manage comments on their ideas"
+CREATE POLICY "Authenticated users can manage idea comments"
   ON idea_comments FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Users can manage brief comments" ON brief_comments;
-CREATE POLICY "Users can manage brief comments"
+CREATE POLICY "Authenticated users can manage brief comments"
   ON brief_comments FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
 DROP POLICY IF EXISTS "Users can manage piece comments" ON piece_comments;
-CREATE POLICY "Users can manage piece comments"
+CREATE POLICY "Authenticated users can manage piece comments"
   ON piece_comments FOR ALL
-  USING (auth.uid() = user_id)
-  WITH CHECK (auth.uid() = user_id);
+  USING (auth.role() = 'authenticated')
+  WITH CHECK (auth.role() = 'authenticated');
 
 -- ============================================================
 -- Auto-update triggers
