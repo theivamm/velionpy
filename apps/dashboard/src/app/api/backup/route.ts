@@ -6,7 +6,7 @@ import { join } from "path";
 
 const execAsync = promisify(exec);
 
-const ROOT = join(process.cwd(), "..", "..", "..");
+const ROOT = join(/*turbopackIgnore: true*/ process.cwd(), "..", "..", "..");
 const BACKUPS_DIR = join(ROOT, "backups");
 
 export async function GET() {

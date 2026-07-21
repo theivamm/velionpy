@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { readFile, stat } from "fs/promises";
 import { join } from "path";
 
-const ROOT = join(process.cwd(), "..", "..", "..");
+const ROOT = join(/*turbopackIgnore: true*/ process.cwd(), "..", "..", "..");
 const BACKUPS_DIR = join(ROOT, "backups");
 
 export async function GET(request: Request) {

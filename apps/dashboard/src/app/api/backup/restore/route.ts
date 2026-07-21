@@ -7,7 +7,7 @@ import { tmpdir } from "os";
 
 const execAsync = promisify(exec);
 
-const ROOT = join(process.cwd(), "..", "..", "..");
+const ROOT = join(/*turbopackIgnore: true*/ process.cwd(), "..", "..", "..");
 const BACKUPS_DIR = join(ROOT, "backups");
 
 export async function POST(request: Request) {
