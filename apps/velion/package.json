@@ -9,10 +9,11 @@
     "lint": "eslint"
   },
   "dependencies": {
-    "@velion/shared": "workspace:*",
     "@supabase/ssr": "^0.12.0",
     "@supabase/supabase-js": "^2.110.2",
+    "@velion/shared": "workspace:*",
     "date-fns": "^4.4.0",
+    "jszip": "^3.10.1",
     "next": "16.2.10",
     "react": "19.2.4",
     "react-dom": "19.2.4",

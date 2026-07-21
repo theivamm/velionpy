@@ -153,7 +153,8 @@ export function PieceViewerModal({
                     {currentMedia && (
                       <a
                         href={currentMedia}
-                        download
+                        target="_blank"
+                        rel="noopener noreferrer"
                         className="p-1.5 rounded-lg hover:bg-white/15 transition-colors text-[var(--text-secondary)] hover:text-velion-cyan"
                         title={language === "es" ? "Descargar" : "Download"}
                       >

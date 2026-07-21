@@ -23,6 +23,7 @@ import {
   formatDistanceToNow,
 } from "date-fns";
 import { es } from "date-fns/locale";
+import JSZip from "jszip";
 
 function PillarsContent() {
   const [currentMonth, setCurrentMonth] = useState(new Date());
@@ -41,6 +42,7 @@ function PillarsContent() {
   const [pieces, setPieces] = useState<CalendarPiece[]>([]);
   const [viewingPiece, setViewingPiece] = useState<CalendarPiece | null>(null);
   const [viewingIdeaImageUrl, setViewingIdeaImageUrl] = useState<string | null>(null);
+  const [downloadingAll, setDownloadingAll] = useState(false);
   const { t, language } = useLanguage();
   const { user } = useAuth();
   const supabase = createClient();
@@ -143,6 +145,47 @@ function PillarsContent() {
       console.error("Error moving idea:", JSON.stringify(error, null, 2));
     } else {
       await fetchData();
+    }
+  };
+
+  const downloadAllPieces = async () => {
+    if (pieces.length === 0) return;
+    setDownloadingAll(true);
+    try {
+      const zip = new JSZip();
+      const monthPrefix = format(currentMonth, "yyyy-MM");
+      const monthPieces = pieces.filter((p) => p.scheduled_date?.startsWith(monthPrefix));
+
+      const files = monthPieces.flatMap((p) => {
+        const urls = [p.media_url, ...(p.media_additional || [])].filter(Boolean) as string[];
+        return urls.map((url) => ({ url, title: p.title }));
+      });
+
+      await Promise.all(
+        files.map(async ({ url, title }, i) => {
+          try {
+            const res = await fetch(url);
+            const blob = await res.blob();
+            const ext = url.match(/\.(mp4|webm|mov|avi|jpg|jpeg|png|gif|webp)$/i)?.[0] || "";
+            const safeTitle = title.replace(/[^a-zA-Z0-9_-]/g, "_");
+            zip.file(`${safeTitle}_${i + 1}${ext}`, blob);
+          } catch {
+            // skip failed files
+          }
+        })
+      );
+
+      if (Object.keys(zip.files).length === 0) return;
+      const content = await zip.generateAsync({ type: "blob" });
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(content);
+      a.download = `piezas-${monthPrefix}.zip`;
+      a.click();
+      URL.revokeObjectURL(a.href);
+    } catch {
+      // silently fail
+    } finally {
+      setDownloadingAll(false);
     }
   };
 
@@ -267,10 +310,23 @@ function PillarsContent() {
             </button>
           </div>
         </div>
-        <Button size="sm" onClick={() => { setEditingIdea(null); setSelectedDate(""); setShowIdeaForm(true); }}>
-          <HiPlus size={16} className="inline mr-1" />
-          {t.pillars.addIdea}
-        </Button>
+        <div className="flex items-center gap-2">
+          {pieces.length > 0 && (
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={downloadAllPieces}
+              disabled={downloadingAll}
+            >
+              <HiDownload size={14} className="inline mr-1" />
+              {downloadingAll ? "..." : language === "es" ? "Descargar todo" : "Download all"}
+            </Button>
+          )}
+          <Button size="sm" onClick={() => { setEditingIdea(null); setSelectedDate(""); setShowIdeaForm(true); }}>
+            <HiPlus size={16} className="inline mr-1" />
+            {t.pillars.addIdea}
+          </Button>
+        </div>
       </div>
 
       <GlassCard>
@@ -1037,7 +1093,8 @@ function IdeaDetailModal({
                           {p.media_url && (
                             <a
                               href={p.media_url}
-                              download
+                              target="_blank"
+                              rel="noopener noreferrer"
                               onClick={(e) => e.stopPropagation()}
                               className="p-1.5 rounded-lg hover:bg-velion-cyan/15 text-[var(--text-secondary)] hover:text-velion-cyan transition-colors shrink-0 cursor-pointer"
                               title={language === "es" ? "Descargar" : "Download"}
