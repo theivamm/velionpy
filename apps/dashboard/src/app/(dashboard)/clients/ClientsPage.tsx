@@ -26,7 +26,6 @@ export default function ClientsPage() {
     const { data } = await supabase
       .from("clients")
       .select("*")
-      .eq("user_id", user.id)
       .order("created_at", { ascending: false });
     if (data) setClients(data);
     setLoading(false);

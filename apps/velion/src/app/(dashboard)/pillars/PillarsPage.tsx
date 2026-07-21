@@ -72,7 +72,6 @@ function PillarsContent() {
     const { data: briefData } = await supabase
       .from("monthly_briefs")
       .select("*")
-      .eq("user_id", user.id)
       .eq("month", String(month).padStart(2, "0"))
       .eq("year", year)
       .single();
@@ -88,15 +87,13 @@ function PillarsContent() {
     const { data: ideasData } = await supabase
       .from("pillar_ideas")
       .select("*")
-      .eq("user_id", user.id)
       .order("scheduled_date", { ascending: true });
 
     if (ideasData) setIdeas(ideasData);
 
     const { data: piecesData } = await supabase
       .from("calendar_pieces")
-      .select("*")
-      .eq("user_id", user.id);
+      .select("*");
     if (piecesData) setPieces(piecesData);
 
     setLoading(false);
@@ -141,8 +138,7 @@ function PillarsContent() {
     const { error } = await supabase
       .from("pillar_ideas")
       .update({ scheduled_date: newDate })
-      .eq("id", ideaId)
-      .eq("user_id", user.id);
+      .eq("id", ideaId);
     if (error) {
       console.error("Error moving idea:", JSON.stringify(error, null, 2));
     } else {

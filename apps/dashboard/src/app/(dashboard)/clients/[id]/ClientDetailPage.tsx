@@ -29,7 +29,6 @@ export default function ClientDetailPage() {
       .from("clients")
       .select("*")
       .eq("id", clientId)
-      .eq("user_id", user.id)
       .single();
     if (data) setClient(data);
     setLoading(false);
