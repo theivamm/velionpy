@@ -1,0 +1,38 @@
+{
+  "name": "@velion/shared",
+  "version": "0.1.0",
+  "private": true,
+  "main": "./src/index.ts",
+  "types": "./src/index.ts",
+  "exports": {
+    ".": "./src/index.ts",
+    "./supabase/client": "./src/supabase/client.ts",
+    "./supabase/server": "./src/supabase/server.ts",
+    "./supabase/admin": "./src/supabase/admin.ts",
+    "./supabase/middleware": "./src/supabase/middleware.ts",
+    "./types": "./src/types/database.types.ts",
+    "./i18n/en": "./src/i18n/en.ts",
+    "./i18n/es": "./src/i18n/es.ts",
+    "./contexts/auth": "./src/contexts/AuthContext.tsx",
+    "./contexts/language": "./src/contexts/LanguageContext.tsx",
+    "./ui/button": "./src/ui/Button.tsx",
+    "./ui/glass-card": "./src/ui/GlassCard.tsx",
+    "./ui/modal-portal": "./src/ui/ModalPortal.tsx",
+    "./ui/theme-toggle": "./src/ui/ThemeToggle.tsx",
+    "./ui/language-toggle": "./src/ui/LanguageToggle.tsx"
+  },
+  "dependencies": {
+    "@supabase/ssr": "^0.12.0",
+    "@supabase/supabase-js": "^2.110.2",
+    "next": "16.2.10",
+    "react": "19.2.4",
+    "react-dom": "19.2.4",
+    "react-icons": "^5.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "typescript": "^5"
+  }
+}

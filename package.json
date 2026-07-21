@@ -1,31 +1,16 @@
 {
-  "name": "velion-py",
-  "version": "0.1.0",
+  "name": "velion",
   "private": true,
   "scripts": {
-    "dev": "next dev",
-    "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
-  },
-  "dependencies": {
-    "@supabase/ssr": "^0.12.0",
-    "@supabase/supabase-js": "^2.110.2",
-    "date-fns": "^4.4.0",
-    "next": "16.2.10",
-    "react": "19.2.4",
-    "react-dom": "19.2.4",
-    "react-dropzone": "^15.0.0",
-    "react-icons": "^5.7.0"
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "lint": "turbo lint",
+    "clean": "turbo clean",
+    "backup": "powershell -ExecutionPolicy Bypass -File scripts/backup.ps1",
+    "restore": "powershell -ExecutionPolicy Bypass -File scripts/restore.ps1"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
-    "eslint": "^9",
-    "eslint-config-next": "16.2.10",
-    "tailwindcss": "^4",
-    "typescript": "^5"
-  }
+    "turbo": "^2"
+  },
+  "packageManager": "pnpm@9.0.0"
 }
