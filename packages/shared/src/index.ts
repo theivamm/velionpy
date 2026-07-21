@@ -4,6 +4,7 @@ export { updateSession } from "./supabase/middleware";
 
 export type {
   PieceType,
+  PieceStatus,
   CalendarPiece,
   MonthlyBrief,
   IdeaStatus,

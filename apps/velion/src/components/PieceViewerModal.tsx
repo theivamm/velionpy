@@ -1,19 +1,22 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
-import { HiXCircle, HiPaperAirplane, HiChat, HiTrash, HiPencil, HiPhotograph, HiDownload } from "react-icons/hi";
+import { HiXCircle, HiPaperAirplane, HiChat, HiTrash, HiPencil, HiPhotograph, HiDownload, HiCheckCircle, HiClock } from "react-icons/hi";
 import { useLanguage, useAuth, createClient, ModalPortal, Button } from "@velion/shared";
-import type { CalendarPiece, PieceCommentWithProfile, Profile } from "@velion/shared/types";
+import type { CalendarPiece, PieceStatus, PieceCommentWithProfile, Profile } from "@velion/shared/types";
 import { formatDistanceToNow, format } from "date-fns";
 import { es } from "date-fns/locale";
 
 export function PieceViewerModal({
-  piece,
+  piece: initialPiece,
   onClose,
+  onUpdate,
 }: {
   piece: CalendarPiece;
   onClose: () => void;
+  onUpdate?: (piece: CalendarPiece) => void;
 }) {
+  const [piece, setPiece] = useState(initialPiece);
   const [comments, setComments] = useState<PieceCommentWithProfile[]>([]);
   const [commentText, setCommentText] = useState("");
   const [sendingComment, setSendingComment] = useState(false);
@@ -126,6 +129,22 @@ export function PieceViewerModal({
 
   const markerSize = 24;
   const isImage = piece.media_url && !isVideo;
+
+  const cycleStatus = async () => {
+    const next: Record<PieceStatus, PieceStatus> = {
+      pending: "ready_to_post",
+      ready_to_post: "posted",
+      posted: "pending",
+    };
+    const newStatus = next[piece.status];
+    await supabase
+      .from("calendar_pieces")
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .eq("id", piece.id);
+    const updated = { ...piece, status: newStatus };
+    setPiece(updated);
+    onUpdate?.(updated);
+  };
   const allMedia: string[] = [piece.media_url, ...(piece.media_additional || [])].filter(Boolean) as string[];
   const currentMedia = allMedia[currentIndex] || "";
 
@@ -148,8 +167,34 @@ export function PieceViewerModal({
                   <h3 className="text-base font-semibold truncate flex items-center gap-2">
                     <HiPhotograph className="text-velion-cyan shrink-0" size={18} />
                     {piece.title}
+                    {piece.status === "posted" && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 font-medium flex items-center gap-1 shrink-0">
+                        <HiCheckCircle size={10} /> {language === "es" ? "Posteado" : "Posted"}
+                      </span>
+                    )}
+                    {piece.status === "ready_to_post" && (
+                      <span className="text-[10px] px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 border border-amber-500/30 font-medium flex items-center gap-1 shrink-0">
+                        <HiClock size={10} /> {language === "es" ? "Listo para postear" : "Ready to post"}
+                      </span>
+                    )}
                   </h3>
                   <div className="flex items-center gap-2">
+                    <button
+                      onClick={cycleStatus}
+                      className={`p-1.5 rounded-lg transition-colors text-sm font-medium flex items-center gap-1.5 ${
+                        piece.status === "posted"
+                          ? "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"
+                          : piece.status === "ready_to_post"
+                            ? "bg-amber-500/20 text-amber-400 hover:bg-amber-500/30"
+                            : "bg-white/10 text-[var(--text-secondary)] hover:bg-white/15"
+                      }`}
+                      title={language === "es" ? "Cambiar estado" : "Change status"}
+                    >
+                      {piece.status === "posted" ? <HiCheckCircle size={16} /> : <HiClock size={16} />}
+                      <span className="text-xs">
+                        {(t.calendar.pieceStatuses as Record<string, string>)[piece.status]}
+                      </span>
+                    </button>
                     {currentMedia && (
                       <a
                         href={currentMedia}

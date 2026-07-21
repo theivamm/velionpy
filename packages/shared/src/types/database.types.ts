@@ -1,10 +1,13 @@
 export type PieceType = "carousel" | "story" | "reel" | "post";
 
+export type PieceStatus = "pending" | "ready_to_post" | "posted";
+
 export interface CalendarPiece {
   id: string;
   user_id: string;
   title: string;
   type: PieceType;
+  status: PieceStatus;
   scheduled_date: string;
   scheduled_time: string;
   media_url: string | null;

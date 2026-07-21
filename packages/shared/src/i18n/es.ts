@@ -39,6 +39,12 @@ export const es: typeof import("./en").en = {
     cancel: "Cancelar",
     delete: "Eliminar",
     noPieces: "No hay piezas programadas para este día",
+    pieceStatus: "Estado de Pieza",
+    pieceStatuses: {
+      pending: "Pendiente",
+      ready_to_post: "Listo para Postear",
+      posted: "Posteado",
+    },
   },
   pillars: {
     title: "Pilares y Temáticas",

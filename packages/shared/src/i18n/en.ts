@@ -39,6 +39,12 @@ export const en = {
     cancel: "Cancel",
     delete: "Delete",
     noPieces: "No pieces scheduled for this day",
+    pieceStatus: "Piece Status",
+    pieceStatuses: {
+      pending: "Pending",
+      ready_to_post: "Ready to Post",
+      posted: "Posted",
+    },
   },
   pillars: {
     title: "Pillars & Themes",

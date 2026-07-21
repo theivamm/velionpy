@@ -6,7 +6,7 @@ import {
   HiCheckCircle, HiPencil, HiClock, HiXCircle, HiChat, HiPaperAirplane, HiTrash, HiPhotograph, HiPaperClip, HiDownload,
 } from "react-icons/hi";
 import { useLanguage, useAuth, createClient, GlassCard, Button, ModalPortal } from "@velion/shared";
-import type { MonthlyBrief, PillarIdea, IdeaStatus, IdeaComment, Profile, PieceType, BriefCommentWithProfile, CalendarPiece } from "@velion/shared/types";
+import type { MonthlyBrief, PillarIdea, IdeaStatus, IdeaComment, Profile, PieceType, PieceStatus, BriefCommentWithProfile, CalendarPiece } from "@velion/shared/types";
 import { useSearchParams } from "next/navigation";
 import { PieceViewerModal } from "@/components/PieceViewerModal";
 import {
@@ -393,10 +393,16 @@ function PillarsContent() {
                               e.preventDefault();
                               setViewingPiece(linkedPiece);
                             }}
-                            className="shrink-0 p-0.5 rounded hover:bg-white/20 transition-colors"
+                            className={`shrink-0 p-0.5 rounded transition-colors ${
+                              linkedPiece.status === "posted"
+                                ? "bg-emerald-500/30 text-emerald-400"
+                                : linkedPiece.status === "ready_to_post"
+                                  ? "bg-amber-500/30 text-amber-400"
+                                  : "hover:bg-white/20 text-velion-cyan"
+                            }`}
                             title={language === "es" ? "Ver pieza" : "View piece"}
                           >
-                            <HiPaperClip size={10} className="text-velion-cyan" />
+                            {linkedPiece.status === "posted" ? <HiCheckCircle size={10} /> : <HiPaperClip size={10} />}
                           </button>
                         )}
                       </div>
@@ -578,6 +584,7 @@ function PillarsContent() {
         <PieceViewerModal
           piece={viewingPiece}
           onClose={() => setViewingPiece(null)}
+          onUpdate={(updated) => { setViewingPiece(updated); fetchData(); }}
         />
       )}
       {viewingIdeaImageUrl && (
@@ -629,6 +636,7 @@ function IdeaDetailModal({
   const [deletingIdea, setDeletingIdea] = useState(false);
   const [showPieceForm, setShowPieceForm] = useState(false);
   const [pieceType, setPieceType] = useState<PieceType>("post");
+  const [pieceStatus, setPieceStatus] = useState<PieceStatus>("pending");
   const [pieceTime, setPieceTime] = useState("12:00");
   const [pieceCaption, setPieceCaption] = useState("");
   const [pieceFiles, setPieceFiles] = useState<File[]>([]);
@@ -801,6 +809,7 @@ function IdeaDetailModal({
         user_id: user.id,
         title: idea.title,
         type: pieceType,
+        status: pieceStatus,
         scheduled_date: idea.scheduled_date || format(new Date(), "yyyy-MM-dd"),
         scheduled_time: pieceTime,
         caption: pieceCaption.trim() || null,
@@ -818,6 +827,7 @@ function IdeaDetailModal({
       setPieceFiles([]);
       setPiecePreviews([]);
       setPieceType("post");
+      setPieceStatus("pending");
       setPieceTime("12:00");
       setPieceCaption("");
       fetchData();
@@ -830,6 +840,21 @@ function IdeaDetailModal({
   const handleDeletePiece = async (pieceId: string) => {
     if (!user) return;
     await supabase.from("calendar_pieces").delete().eq("id", pieceId);
+    fetchData();
+  };
+
+  const cyclePieceStatus = async (piece: CalendarPiece) => {
+    if (!user) return;
+    const next: Record<PieceStatus, PieceStatus> = {
+      pending: "ready_to_post",
+      ready_to_post: "posted",
+      posted: "pending",
+    };
+    const newStatus = next[piece.status];
+    await supabase
+      .from("calendar_pieces")
+      .update({ status: newStatus, updated_at: new Date().toISOString() })
+      .eq("id", piece.id);
     fetchData();
   };
 
@@ -1039,10 +1064,16 @@ function IdeaDetailModal({
                 </div>
 
                 {linkedPieces.map((p) => (
-                  <div key={p.id} className="rounded-xl bg-white/5 border border-[var(--glass-border)] overflow-hidden mb-3 last:mb-0 relative">
+                  <div key={p.id} className={`rounded-xl border overflow-hidden mb-3 last:mb-0 relative transition-all ${
+                    p.status === "posted"
+                      ? "bg-emerald-500/10 border-emerald-500/30"
+                      : p.status === "ready_to_post"
+                        ? "bg-amber-500/10 border-amber-500/30"
+                        : "bg-white/5 border-[var(--glass-border)]"
+                  }`}>
                     <div
                       onClick={() => setViewingPieceInModal(p)}
-                      className="w-full block text-left cursor-pointer"
+                      className={`w-full block text-left cursor-pointer ${p.status === "posted" ? "blur-sm" : ""}`}
                     >
                       {p.media_url ? (
                         p.media_url.match(/\.(mp4|webm|mov|avi)$/i) ? (
@@ -1119,6 +1150,36 @@ function IdeaDetailModal({
                         </span>
                       </div>
                     </div>
+                    {p.status === "posted" && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                        <div className="w-12 h-12 rounded-full bg-emerald-500/90 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                          <HiCheckCircle size={28} className="text-white" />
+                        </div>
+                      </div>
+                    )}
+                    {p.status === "ready_to_post" && (
+                      <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                        <div className="px-3 py-1.5 rounded-full bg-amber-500/90 flex items-center gap-1.5 shadow-lg shadow-amber-500/30">
+                          <HiClock size={16} className="text-white" />
+                          <span className="text-xs font-semibold text-white">{language === "es" ? "Listo para postear" : "Ready to post"}</span>
+                        </div>
+                      </div>
+                    )}
+                    <div className="absolute top-2 right-2 z-20 flex items-center gap-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); cyclePieceStatus(p); }}
+                        className={`p-1.5 rounded-lg backdrop-blur-md transition-colors cursor-pointer ${
+                          p.status === "posted"
+                            ? "bg-emerald-500/80 text-white hover:bg-emerald-500"
+                            : p.status === "ready_to_post"
+                              ? "bg-amber-500/80 text-white hover:bg-amber-500"
+                              : "bg-black/50 text-white/70 hover:bg-black/70 hover:text-white"
+                        }`}
+                        title={language === "es" ? "Cambiar estado" : "Change status"}
+                      >
+                        {p.status === "posted" ? <HiCheckCircle size={14} /> : <HiClock size={14} />}
+                      </button>
+                    </div>
                   </div>
                 ))}
 
@@ -1140,6 +1201,27 @@ function IdeaDetailModal({
                             {(t.calendar.type as Record<string, string>)[pt]}
                           </button>
                         ))}
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">{t.calendar.pieceStatus}</label>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(["pending", "ready_to_post", "posted"] as PieceStatus[]).map((ps) => {
+                          const statusStyles: Record<PieceStatus, string> = {
+                            pending: pieceStatus === ps ? "bg-white/15 border-white/30 text-[var(--text-primary)]" : "bg-white/5 border-[var(--glass-border)] text-[var(--text-secondary)] hover:bg-white/10",
+                            ready_to_post: pieceStatus === ps ? "bg-amber-500/15 border-amber-500/40 text-amber-400" : "bg-white/5 border-[var(--glass-border)] text-[var(--text-secondary)] hover:bg-white/10",
+                            posted: pieceStatus === ps ? "bg-emerald-500/15 border-emerald-500/40 text-emerald-400" : "bg-white/5 border-[var(--glass-border)] text-[var(--text-secondary)] hover:bg-white/10",
+                          };
+                          return (
+                            <button
+                              key={ps}
+                              onClick={() => setPieceStatus(ps)}
+                              className={`py-2 rounded-lg text-xs font-medium border transition-all ${statusStyles[ps]}`}
+                            >
+                              {(t.calendar.pieceStatuses as Record<string, string>)[ps]}
+                            </button>
+                          );
+                        })}
                       </div>
                     </div>
                     <div>
@@ -1451,6 +1533,7 @@ function IdeaDetailModal({
         <PieceViewerModal
           piece={viewingPieceInModal}
           onClose={() => setViewingPieceInModal(null)}
+          onUpdate={(updated) => { setViewingPieceInModal(updated); fetchData(); }}
         />
       )}
       {viewingIdeaImage && idea.image_url && (
