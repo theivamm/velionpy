@@ -4,7 +4,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useParams, useRouter } from "next/navigation";
 import {
   HiArrowLeft, HiPencil, HiTrash, HiUser,
-  HiCheckCircle, HiClock, HiMegaphone,
+  HiCheckCircle, HiClock, HiSpeakerphone,
   HiMail, HiPhone, HiOfficeBuilding, HiDocumentText,
 } from "react-icons/hi";
 import { useLanguage, useAuth, createClient, GlassCard, Button, ModalPortal } from "@velion/shared";
@@ -54,7 +54,7 @@ export default function ClientDetailPage() {
   const statusIcons = {
     active: <HiCheckCircle size={16} />,
     inactive: <HiClock size={16} />,
-    lead: <HiMegaphone size={16} />,
+    lead: <HiSpeakerphone size={16} />,
   };
 
   if (loading) {

@@ -1,5 +1,3 @@
-"use client";
-
 import { NextResponse } from "next/server";
 import { createClient } from "@velion/shared/supabase/server";
 

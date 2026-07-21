@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { exec } from "child_process";
 import { promisify } from "util";
-import { readdir, stat, mkdir } from "fs/promises";
+import { readdir, stat, mkdir, access } from "fs/promises";
 import { join } from "path";
 
 const execAsync = promisify(exec);
@@ -54,17 +54,17 @@ export async function POST(request: Request) {
       "node_modules", ".next", ".turbo", "out", "build", ".git", "backups", "coverage",
     ];
 
-    const items = includeItems
-      .filter((item) => {
+    const existingItems = await Promise.all(
+      includeItems.map(async (item) => {
         try {
-          const { statSync } = require("fs");
-          statSync(join(ROOT, item));
-          return true;
+          await access(join(ROOT, item));
+          return item;
         } catch {
-          return false;
+          return null;
         }
       })
-      .join(" ");
+    );
+    const items = existingItems.filter(Boolean).join(" ");
 
     const excludes = excludeDirs.map((d) => `--exclude="${d}"`).join(" ");
 
