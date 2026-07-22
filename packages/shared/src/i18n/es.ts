@@ -76,6 +76,7 @@ export const es: typeof import("./en").en = {
       needs_revision: "Necesita Revisión",
       standby: "En Espera",
       draft: "Borrador",
+      posted: "Posteado",
     },
     pieceType: "Tipo de Pieza",
     allTypes: "Todos los Tipos",

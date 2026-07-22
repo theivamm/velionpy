@@ -122,7 +122,7 @@ CREATE TABLE IF NOT EXISTS pillar_ideas (
   pillar TEXT NOT NULL DEFAULT 'General',
   theme TEXT NOT NULL DEFAULT 'General',
   type TEXT NOT NULL DEFAULT 'post' CHECK (type IN ('carousel', 'story', 'reel', 'post')),
-  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'approved', 'needs_revision', 'standby')),
+  status TEXT NOT NULL DEFAULT 'draft' CHECK (status IN ('draft', 'approved', 'needs_revision', 'standby', 'posted')),
   feedback TEXT,
   scheduled_date DATE,
   created_at TIMESTAMPTZ NOT NULL DEFAULT now(),

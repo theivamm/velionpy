@@ -76,6 +76,7 @@ export const en = {
       needs_revision: "Needs Revision",
       standby: "Standby",
       draft: "Draft",
+      posted: "Posted",
     },
     pieceType: "Piece Type",
     allTypes: "All Types",

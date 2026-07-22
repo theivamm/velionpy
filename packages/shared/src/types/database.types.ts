@@ -28,7 +28,7 @@ export interface MonthlyBrief {
   updated_at: string;
 }
 
-export type IdeaStatus = "approved" | "needs_revision" | "standby" | "draft";
+export type IdeaStatus = "approved" | "needs_revision" | "standby" | "draft" | "posted";
 
 export interface PillarIdea {
   id: string;

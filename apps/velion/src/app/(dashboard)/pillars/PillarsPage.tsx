@@ -203,6 +203,7 @@ function PillarsContent() {
     needs_revision: "bg-rose-500/20 text-rose-400 border-rose-500/30",
     standby: "bg-amber-500/20 text-amber-400 border-amber-500/30",
     draft: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30",
+    posted: "bg-emerald-500 text-white border-emerald-400",
   };
 
   const statusIcons: Record<IdeaStatus, React.ReactNode> = {
@@ -210,6 +211,7 @@ function PillarsContent() {
     needs_revision: <HiXCircle size={14} />,
     standby: <HiClock size={14} />,
     draft: <HiPencil size={14} />,
+    posted: <HiCheckCircle size={14} />,
   };
 
   const pillarPalette = [
@@ -382,10 +384,15 @@ function PillarsContent() {
                           e.stopPropagation();
                           setViewingIdea(idea);
                         }}
-                        className={`text-[11px] px-1.5 py-0.5 rounded-md border truncate flex items-center gap-1 cursor-grab active:cursor-grabbing ${pieceTypeColors[idea.type]}`}
+                        className={`text-[11px] px-1.5 py-0.5 rounded-md border truncate flex items-center gap-1 cursor-grab active:cursor-grabbing ${
+                          idea.status === "posted"
+                            ? "bg-emerald-500 text-white border-emerald-400"
+                            : pieceTypeColors[idea.type]
+                        }`}
                         title={`${idea.title} - ${(t.calendar.type as Record<string, string>)[idea.type]}`}
                       >
                         <span className="truncate flex-1">{idea.title}</span>
+                        {idea.status === "posted" && <HiCheckCircle size={10} className="shrink-0" />}
                         {linkedPiece && (
                           <button
                             onClick={(e) => {
@@ -451,18 +458,28 @@ function PillarsContent() {
             {monthIdeas.filter((i) => typeFilter === "all" || i.type === typeFilter).map((idea) => (
               <GlassCard
                 key={idea.id}
-                className="!p-4 cursor-pointer border-l-4 hover:scale-[1.02] transition-all"
+                className={`!p-4 cursor-pointer border-l-4 hover:scale-[1.02] transition-all relative overflow-hidden ${
+                  idea.status === "posted" ? "!bg-emerald-500/15 !border-emerald-500" : ""
+                }`}
                 style={{
                   borderLeftColor: {
                     approved: "#10b981",
                     needs_revision: "#f43f5e",
                     standby: "#f59e0b",
                     draft: "#71717a",
+                    posted: "#10b981",
                   }[idea.status],
                 }}
                 onClick={() => setViewingIdea(idea)}
               >
-                <div className="flex items-center gap-2 mb-2 flex-wrap">
+                {idea.status === "posted" && (
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-10">
+                    <div className="w-12 h-12 rounded-full bg-emerald-500/90 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+                      <HiCheckCircle size={28} className="text-white" />
+                    </div>
+                  </div>
+                )}
+                <div className={`flex items-center gap-2 mb-2 flex-wrap ${idea.status === "posted" ? "blur-[2px]" : ""}`}>
                   <span className={`text-xs px-2 py-0.5 rounded-md border ${
                     pieceTypeColors[idea.type]
                   }`}>
@@ -475,9 +492,9 @@ function PillarsContent() {
                   </span>
                   <span className="text-xs text-[var(--text-secondary)]">{idea.theme}</span>
                 </div>
-                <p className="text-sm font-medium">{idea.title}</p>
+                <p className={`text-sm font-medium ${idea.status === "posted" ? "blur-[2px]" : ""}`}>{idea.title}</p>
                 {idea.description && (
-                  <p className="text-xs text-[var(--text-secondary)] mt-1 line-clamp-2 whitespace-pre-wrap">{idea.description}</p>
+                  <p className={`text-xs text-[var(--text-secondary)] mt-1 line-clamp-2 whitespace-pre-wrap ${idea.status === "posted" ? "blur-[2px]" : ""}`}>{idea.description}</p>
                 )}
                 {idea.image_url && (
                   <button
@@ -485,7 +502,7 @@ function PillarsContent() {
                       e.stopPropagation();
                       setViewingIdeaImageUrl(idea.image_url!);
                     }}
-                    className="mt-2 w-full block"
+                    className={`mt-2 w-full block ${idea.status === "posted" ? "blur-[2px]" : ""}`}
                   >
                     <img src={idea.image_url} alt="" className="w-full h-24 object-cover rounded-lg hover:opacity-80 transition-opacity" />
                   </button>
@@ -498,7 +515,7 @@ function PillarsContent() {
                         e.stopPropagation();
                         setViewingPiece(linkedPiece);
                       }}
-                      className="mt-2 w-full block rounded-lg overflow-hidden border border-[var(--glass-border)] hover:border-velion-cyan/40 transition-all text-left"
+                      className={`mt-2 w-full block rounded-lg overflow-hidden border border-[var(--glass-border)] hover:border-velion-cyan/40 transition-all text-left ${idea.status === "posted" ? "blur-[2px]" : ""}`}
                     >
                       {linkedPiece.media_url ? (
                         <img src={linkedPiece.media_url} alt={linkedPiece.title} className="w-full h-28 object-cover" />
@@ -521,7 +538,7 @@ function PillarsContent() {
                     </button>
                   ) : null;
                 })()}
-                <div className="flex items-center justify-between mt-3">
+                <div className={`flex items-center justify-between mt-3 ${idea.status === "posted" ? "blur-[2px]" : ""}`}>
                   <div className="flex items-center gap-2">
                     {idea.scheduled_date ? (
                       <p className="text-xs text-velion-cyan">
@@ -660,6 +677,7 @@ function IdeaDetailModal({
     needs_revision: "bg-rose-500/20 text-rose-400 border-rose-500/30",
     standby: "bg-amber-500/20 text-amber-400 border-amber-500/30",
     draft: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30",
+    posted: "bg-emerald-500 text-white border-emerald-400",
   };
 
   const statusBars: Record<IdeaStatus, string> = {
@@ -667,6 +685,7 @@ function IdeaDetailModal({
     needs_revision: "bg-rose-500",
     standby: "bg-amber-500",
     draft: "bg-zinc-500",
+    posted: "bg-emerald-600",
   };
 
   const statusIcons: Record<IdeaStatus, React.ReactNode> = {
@@ -674,6 +693,7 @@ function IdeaDetailModal({
     needs_revision: <HiXCircle size={16} />,
     standby: <HiClock size={16} />,
     draft: <HiPencil size={16} />,
+    posted: <HiCheckCircle size={16} />,
   };
 
   const pillarPalette = [
@@ -1323,7 +1343,7 @@ function IdeaDetailModal({
 
               <div>
                 <label className="block text-sm font-semibold text-[var(--text-secondary)] mb-3 uppercase tracking-wider">{t.pillars.status}</label>
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-3 gap-3">
                   {(Object.keys(t.pillars.statuses) as IdeaStatus[]).map((s) => {
                     const isActive = status === s;
                     return (
@@ -1937,6 +1957,7 @@ function IdeaFormModal({
     needs_revision: "bg-rose-500/20 text-rose-400 border-rose-500/30",
     standby: "bg-amber-500/20 text-amber-400 border-amber-500/30",
     draft: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30",
+    posted: "bg-emerald-500 text-white border-emerald-400",
   };
 
   const pieceTypeColors: Record<PieceType, string> = {
@@ -2032,7 +2053,7 @@ function IdeaFormModal({
 
           <div>
             <label className="block text-xs font-medium text-[var(--text-secondary)] mb-1.5">{t.pillars.status}</label>
-            <div className="grid grid-cols-2 gap-2">
+            <div className="grid grid-cols-3 gap-2">
               {(Object.keys(t.pillars.statuses) as IdeaStatus[]).map((s) => (
                 <button
                   key={s}
