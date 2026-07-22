@@ -60,6 +60,7 @@ function PillarsContent() {
   const monthStr = format(currentMonth, "yyyy-MM");
   const dateLocale = language === "es" ? es : undefined;
   const monthIdeas = ideas.filter((i) => {
+    if (i.status === "archived") return false;
     if (!i.scheduled_date) return false;
     const d = new Date(i.scheduled_date + "T00:00:00");
     return isSameMonth(d, currentMonth);
@@ -97,6 +98,12 @@ function PillarsContent() {
       .from("calendar_pieces")
       .select("*");
     if (piecesData) setPieces(piecesData);
+
+    const { data: archivedData } = await supabase
+      .from("pillar_ideas")
+      .select("id")
+      .eq("status", "archived");
+    if (archivedData) setArchivedIdeas(archivedData as PillarIdea[]);
 
     setLoading(false);
     return ideasData;
@@ -189,6 +196,36 @@ function PillarsContent() {
     }
   };
 
+  const fetchArchivedIdeas = useCallback(async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from("pillar_ideas")
+      .select("*")
+      .eq("status", "archived")
+      .order("updated_at", { ascending: false });
+    if (data) setArchivedIdeas(data);
+  }, [user, supabase]);
+
+  const handleArchiveIdea = async (ideaId: string) => {
+    if (!user) return;
+    await supabase
+      .from("pillar_ideas")
+      .update({ status: "archived", scheduled_date: null, updated_at: new Date().toISOString() })
+      .eq("id", ideaId);
+    await fetchData();
+    if (showArchivedDrawer) fetchArchivedIdeas();
+  };
+
+  const handleUnarchiveIdea = async (ideaId: string) => {
+    if (!user) return;
+    await supabase
+      .from("pillar_ideas")
+      .update({ status: "draft", updated_at: new Date().toISOString() })
+      .eq("id", ideaId);
+    await fetchData();
+    fetchArchivedIdeas();
+  };
+
   const daysInMonth = eachDayOfInterval({
     start: startOfWeek(startOfMonth(currentMonth), { weekStartsOn: 1 }),
     end: endOfWeek(endOfMonth(currentMonth), { weekStartsOn: 1 }),
@@ -204,6 +241,7 @@ function PillarsContent() {
     standby: "bg-amber-500/20 text-amber-400 border-amber-500/30",
     draft: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30",
     posted: "bg-emerald-500 text-white border-emerald-400",
+    archived: "bg-stone-500/20 text-stone-400 border-stone-500/30",
   };
 
   const statusIcons: Record<IdeaStatus, React.ReactNode> = {
@@ -212,6 +250,7 @@ function PillarsContent() {
     standby: <HiClock size={14} />,
     draft: <HiPencil size={14} />,
     posted: <HiCheckCircle size={14} />,
+    archived: <HiClock size={14} />,
   };
 
   const pillarPalette = [
@@ -229,6 +268,8 @@ function PillarsContent() {
     post: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
   };
   const [typeFilter, setTypeFilter] = useState<PieceType | "all">("all");
+  const [showArchivedDrawer, setShowArchivedDrawer] = useState(false);
+  const [archivedIdeas, setArchivedIdeas] = useState<PillarIdea[]>([]);
 
   return (
     <div className="animate-fade-in space-y-6">
@@ -343,7 +384,7 @@ function PillarsContent() {
         <div className="grid grid-cols-7 gap-1">
           {daysInMonth.map((day, idx) => {
             const dateStr = format(day, "yyyy-MM-dd");
-            const dayIdeas = ideas.filter((i) => i.scheduled_date === dateStr);
+            const dayIdeas = ideas.filter((i) => i.scheduled_date === dateStr && i.status !== "archived");
             const isCurrent = isSameMonth(day, currentMonth);
 
             return (
@@ -468,6 +509,7 @@ function PillarsContent() {
                     standby: "#f59e0b",
                     draft: "#71717a",
                     posted: "#10b981",
+                    archived: "#78716c",
                   }[idea.status],
                 }}
                 onClick={() => setViewingIdea(idea)}
@@ -561,6 +603,16 @@ function PillarsContent() {
         </div>
       )}
 
+      {showArchivedDrawer && (
+        <ArchivedIdeasDrawer
+          ideas={archivedIdeas}
+          onClose={() => setShowArchivedDrawer(false)}
+          onUnarchive={handleUnarchiveIdea}
+          onView={(idea) => { setViewingIdea(idea); setShowArchivedDrawer(false); }}
+          onRefresh={fetchArchivedIdeas}
+        />
+      )}
+
       {viewingIdea && (
         <IdeaDetailModal
           idea={viewingIdea}
@@ -580,6 +632,10 @@ function PillarsContent() {
               const updated = ideasData.find((i) => i.id === viewingIdea.id);
               if (updated) setViewingIdea(updated);
             }
+          }}
+          onArchive={(ideaId) => {
+            handleArchiveIdea(ideaId);
+            setViewingIdea(null);
           }}
         />
       )}
@@ -622,6 +678,43 @@ function PillarsContent() {
           </div>
         </ModalPortal>
       )}
+
+      <div
+        className="fixed right-4 bottom-6 z-[85] group"
+        onMouseEnter={() => { if (!showArchivedDrawer) fetchArchivedIdeas(); }}
+      >
+        <button
+          onClick={() => {
+            if (showArchivedDrawer) {
+              setShowArchivedDrawer(false);
+            } else {
+              fetchArchivedIdeas();
+              setShowArchivedDrawer(true);
+            }
+          }}
+          className={`relative w-12 h-12 rounded-full flex items-center justify-center transition-all duration-200 shadow-lg ${
+            showArchivedDrawer
+              ? "bg-amber-500 text-white shadow-amber-500/30"
+              : "bg-[var(--bg-secondary)] border border-amber-500/30 text-amber-400 hover:bg-amber-500/15 hover:border-amber-400/50 shadow-amber-500/10"
+          }`}
+          title={t.pillars.archivedIdeas}
+        >
+          <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+            <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+          </svg>
+          {archivedIdeas.length > 0 && (
+            <span className="absolute -top-1 -right-1 text-[9px] font-bold w-5 h-5 rounded-full bg-amber-500 text-white flex items-center justify-center shadow-sm">
+              {archivedIdeas.length}
+            </span>
+          )}
+        </button>
+        <div className="absolute right-full mr-3 top-1/2 -translate-y-1/2 pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+          <div className="bg-[var(--bg-secondary)] border border-[var(--glass-border)] rounded-lg px-3 py-1.5 text-xs font-medium text-[var(--text-primary)] whitespace-nowrap shadow-lg">
+            {t.pillars.archivedIdeas}
+            <div className="absolute top-1/2 -translate-y-1/2 -right-1 w-2 h-2 bg-[var(--bg-secondary)] border-r border-b border-[var(--glass-border)] rotate-[-45deg]" />
+          </div>
+        </div>
+      </div>
     </div>
   );
 }
@@ -632,12 +725,14 @@ function IdeaDetailModal({
   onEdit,
   onSaved,
   onRefresh,
+  onArchive,
 }: {
   idea: PillarIdea;
   onClose: () => void;
   onEdit: () => void;
   onSaved: () => void;
   onRefresh: () => void;
+  onArchive: (ideaId: string) => void;
 }) {
   const [status, setStatus] = useState<IdeaStatus>(idea.status);
   const [comments, setComments] = useState<IdeaComment[]>([]);
@@ -678,6 +773,7 @@ function IdeaDetailModal({
     standby: "bg-amber-500/20 text-amber-400 border-amber-500/30",
     draft: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30",
     posted: "bg-emerald-500 text-white border-emerald-400",
+    archived: "bg-stone-500/20 text-stone-400 border-stone-500/30",
   };
 
   const statusBars: Record<IdeaStatus, string> = {
@@ -686,6 +782,7 @@ function IdeaDetailModal({
     standby: "bg-amber-500",
     draft: "bg-zinc-500",
     posted: "bg-emerald-600",
+    archived: "bg-stone-500",
   };
 
   const statusIcons: Record<IdeaStatus, React.ReactNode> = {
@@ -694,6 +791,7 @@ function IdeaDetailModal({
     standby: <HiClock size={16} />,
     draft: <HiPencil size={16} />,
     posted: <HiCheckCircle size={16} />,
+    archived: <HiClock size={16} />,
   };
 
   const pillarPalette = [
@@ -950,13 +1048,24 @@ function IdeaDetailModal({
                     </button>
                   </>
                 ) : (
-                  <button
-                    onClick={() => setConfirmDeleting(true)}
-                    className="p-2 rounded-lg hover:bg-rose-500/15 transition-colors text-[var(--text-secondary)] hover:text-rose-400"
-                    title={t.calendar.delete}
-                  >
-                    <HiTrash size={16} />
-                  </button>
+                  <>
+                    <button
+                      onClick={() => onArchive(idea.id)}
+                      className="p-2 rounded-lg hover:bg-amber-500/15 transition-colors text-[var(--text-secondary)] hover:text-amber-400"
+                      title={t.pillars.archive}
+                    >
+                      <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setConfirmDeleting(true)}
+                      className="p-2 rounded-lg hover:bg-rose-500/15 transition-colors text-[var(--text-secondary)] hover:text-rose-400"
+                      title={t.calendar.delete}
+                    >
+                      <HiTrash size={16} />
+                    </button>
+                  </>
                 )}
                 <Button size="sm" variant="secondary" onClick={onEdit}>
                   <HiPencil size={14} className="inline mr-1" />
@@ -1862,6 +1971,165 @@ function BriefDetailModal({
   );
 }
 
+function ArchivedIdeasDrawer({
+  ideas,
+  onClose,
+  onUnarchive,
+  onView,
+  onRefresh,
+}: {
+  ideas: PillarIdea[];
+  onClose: () => void;
+  onUnarchive: (ideaId: string) => void;
+  onView: (idea: PillarIdea) => void;
+  onRefresh: () => void;
+}) {
+  const [activeType, setActiveType] = useState<PieceType | "all">("all");
+  const [confirmUnarchive, setConfirmUnarchive] = useState<string | null>(null);
+  const { t, language } = useLanguage();
+  const dateLocale = language === "es" ? es : undefined;
+
+  const pieceTypeColors: Record<PieceType, string> = {
+    carousel: "bg-purple-500/20 text-purple-400 border-purple-500/30",
+    story: "bg-pink-500/20 text-pink-400 border-pink-500/30",
+    reel: "bg-red-500/20 text-red-400 border-red-500/30",
+    post: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
+  };
+
+  const pillarPalette = [
+    "bg-blue-500/20 text-blue-400 border-blue-500/30",
+    "bg-green-500/20 text-green-400 border-green-500/30",
+    "bg-orange-500/20 text-orange-400 border-orange-500/30",
+    "bg-pink-500/20 text-pink-400 border-pink-500/30",
+    "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
+  ];
+
+  const filteredIdeas = activeType === "all" ? ideas : ideas.filter((i) => i.type === activeType);
+
+  const typeCounts = ideas.reduce((acc, i) => {
+    acc[i.type] = (acc[i.type] || 0) + 1;
+    return acc;
+  }, {} as Record<PieceType, number>);
+
+  return (
+    <div className="fixed inset-y-20 right-4 z-[90] w-[340px] md:w-[380px] flex flex-col animate-slide-in-right pointer-events-auto">
+      <div className="glass-card flex-1 flex flex-col overflow-hidden shadow-2xl shadow-black/30 border border-amber-500/20">
+        <div className="p-4 border-b border-[var(--glass-border)] flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="p-1.5 rounded-lg bg-amber-500/15">
+              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2} className="text-amber-400">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              </svg>
+            </div>
+            <div>
+              <h3 className="text-sm font-semibold">{t.pillars.archiveTitle}</h3>
+              <p className="text-[10px] text-[var(--text-secondary)]">{ideas.length} {language === "es" ? "ideas" : "ideas"}</p>
+            </div>
+          </div>
+          <button
+            onClick={onClose}
+            className="p-1.5 rounded-lg hover:bg-white/10 transition-colors text-[var(--text-secondary)] hover:text-[var(--text-primary)]"
+          >
+            <HiXCircle size={18} />
+          </button>
+        </div>
+
+        <div className="p-3 border-b border-[var(--glass-border)] shrink-0">
+          <div className="flex items-center gap-1 flex-wrap">
+            <button
+              onClick={() => setActiveType("all")}
+              className={`text-[10px] px-2 py-1 rounded-md border transition-all ${
+                activeType === "all"
+                  ? "bg-velion-cyan/15 border-velion-cyan/40 text-velion-cyan"
+                  : "bg-white/5 border-[var(--glass-border)] text-[var(--text-secondary)] hover:bg-white/10"
+              }`}
+            >
+              {t.pillars.allTypes} ({ideas.length})
+            </button>
+            {(Object.keys(pieceTypeColors) as PieceType[]).map((pt) => (
+              <button
+                key={pt}
+                onClick={() => setActiveType(pt)}
+                className={`text-[10px] px-2 py-1 rounded-md border transition-all ${
+                  activeType === pt
+                    ? `${pieceTypeColors[pt]} shadow-sm`
+                    : "bg-white/5 border-[var(--glass-border)] text-[var(--text-secondary)] hover:bg-white/10"
+                }`}
+              >
+                {(t.calendar.type as Record<string, string>)[pt]} ({typeCounts[pt] || 0})
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-3 space-y-2">
+          {filteredIdeas.length === 0 ? (
+            <div className="text-center py-10 text-[var(--text-secondary)]">
+              <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5} className="mx-auto mb-2 opacity-30">
+                <path strokeLinecap="round" strokeLinejoin="round" d="M5 8h14M5 8a2 2 0 110-4h14a2 2 0 110 4M5 8v10a2 2 0 002 2h10a2 2 0 002-2V8m-9 4h4" />
+              </svg>
+              <p className="text-xs">{t.pillars.noArchived}</p>
+            </div>
+          ) : (
+            filteredIdeas.map((idea) => (
+              <div
+                key={idea.id}
+                className="p-3 rounded-xl bg-white/5 border border-[var(--glass-border)] hover:bg-white/8 transition-all cursor-pointer group"
+                onClick={() => onView(idea)}
+              >
+                <div className="flex items-center gap-1.5 mb-1.5 flex-wrap">
+                  <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${pieceTypeColors[idea.type]}`}>
+                    {(t.calendar.type as Record<string, string>)[idea.type]}
+                  </span>
+                  {idea.pillar && (
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded border font-medium ${
+                      pillarPalette[Math.abs(idea.pillar.length) % pillarPalette.length]
+                    }`}>
+                      {idea.pillar}
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs font-medium mb-0.5 truncate">{idea.title}</p>
+                {idea.description && (
+                  <p className="text-[10px] text-[var(--text-secondary)] line-clamp-1 mb-1">{idea.description}</p>
+                )}
+                <div className="flex items-center justify-between mt-1.5">
+                  <span className="text-[9px] text-[var(--text-secondary)]">
+                    {formatDistanceToNow(new Date(idea.updated_at), { addSuffix: true, locale: dateLocale })}
+                  </span>
+                  {confirmUnarchive === idea.id ? (
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={(e) => { e.stopPropagation(); onUnarchive(idea.id); setConfirmUnarchive(null); }}
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30 font-medium transition-all"
+                      >
+                        {t.pillars.unarchive}
+                      </button>
+                      <button
+                        onClick={(e) => { e.stopPropagation(); setConfirmUnarchive(null); }}
+                        className="text-[9px] px-1.5 py-0.5 rounded text-[var(--text-secondary)] hover:bg-white/10 transition-all"
+                      >
+                        {t.calendar.cancel}
+                      </button>
+                    </div>
+                  ) : (
+                    <button
+                      onClick={(e) => { e.stopPropagation(); setConfirmUnarchive(idea.id); }}
+                      className="text-[9px] px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-400 hover:bg-emerald-500/20 font-medium transition-all"
+                    >
+                      {t.pillars.unarchive}
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PillarsPage() {
   return (
     <Suspense fallback={<div className="animate-fade-in space-y-6"><div className="h-8 shimmer w-48 rounded-xl" /><div className="h-32 shimmer rounded-2xl" /><div className="grid grid-cols-7 gap-1"><div className="h-24 shimmer rounded-xl" /><div className="h-24 shimmer rounded-xl" /><div className="h-24 shimmer rounded-xl" /><div className="h-24 shimmer rounded-xl" /><div className="h-24 shimmer rounded-xl" /><div className="h-24 shimmer rounded-xl" /><div className="h-24 shimmer rounded-xl" /></div></div>}>
@@ -1958,6 +2226,7 @@ function IdeaFormModal({
     standby: "bg-amber-500/20 text-amber-400 border-amber-500/30",
     draft: "bg-zinc-500/20 text-zinc-400 border-zinc-500/30",
     posted: "bg-emerald-500 text-white border-emerald-400",
+    archived: "bg-stone-500/20 text-stone-400 border-stone-500/30",
   };
 
   const pieceTypeColors: Record<PieceType, string> = {
