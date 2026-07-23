@@ -10,6 +10,7 @@ export const en = {
     logout: "Logout",
     clients: "Clients",
     dashboard: "Dashboard",
+    archived: "Archived",
   },
   login: {
     title: "Welcome back",

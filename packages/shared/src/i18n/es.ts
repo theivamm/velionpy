@@ -10,6 +10,7 @@ export const es: typeof import("./en").en = {
     logout: "Cerrar sesión",
     clients: "Clientes",
     dashboard: "Dashboard",
+    archived: "Archivados",
   },
   login: {
     title: "Bienvenido de nuevo",

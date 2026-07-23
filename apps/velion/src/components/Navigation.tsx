@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useState, useRef } from "react";
-import { HiViewGrid, HiCog, HiLogout } from "react-icons/hi";
+import { HiViewGrid, HiCog, HiLogout, HiArchive } from "react-icons/hi";
 import { useLanguage, useAuth, ThemeToggle, LanguageToggle } from "@velion/shared";
 
 export function Navigation() {
@@ -31,6 +31,7 @@ export function Navigation() {
 
   const links = [
     { href: "/pillars", label: t.nav.pillars, icon: HiViewGrid },
+    { href: "/archived", label: t.nav.archived, icon: HiArchive },
     { href: "/settings", label: t.nav.settings, icon: HiCog },
   ];
 
