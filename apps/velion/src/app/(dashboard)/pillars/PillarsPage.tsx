@@ -194,7 +194,7 @@ function PillarsContent() {
     if (!user) return;
     await supabase
       .from("pillar_ideas")
-      .update({ status: "archived", scheduled_date: null, updated_at: new Date().toISOString() })
+      .update({ status: "archived", updated_at: new Date().toISOString() })
       .eq("id", ideaId);
     await fetchData();
   };
